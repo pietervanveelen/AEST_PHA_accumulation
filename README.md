@@ -1,1 +1,5 @@
-# AEST_PHA_accumulation
+### PHA Accumulating microbial community dynamics
+
+This is repository contains the analysis of microbial communities comprising PHA accumulating bacteria. The dataset describes the temporal dynamics of PHA-accumulating microbial communities treated with CaOH~2~ or KOH as feedstock. 
+A different subset of the microbial community is enriched in the first 48 hours in runs with CaOH~2~ compared with KOH, that caused enhanced PHA accumulation.
+Input data were created by sequencing 16S rRNA gene amplicons using primers 515F and 926R on Illumina Miseq (300 bp PE). Fastq sequence files were analysed using QIIME2 (scripts can be found in the scripts/QIIME2/ directory) and the feature table, taxonomic assignments, phylogeny and metadata were imported into R (in input_data/). The [MiDAS4](https://www.midasfieldguide.org/global) was used as reference data for taxonomic assignments. This analysis was published by **Estevan Alonso et al. (2022)** "url DOI" titled *Calcium addition indirectly promotes selective biomass growth and polyhydroxyalkanoate accumulation*.
