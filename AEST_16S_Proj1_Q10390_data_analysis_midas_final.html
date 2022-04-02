@@ -185,6 +185,77 @@ pre code {
 <div id="cleaning-data-set" class="section level3">
 <h3>Cleaning data set</h3>
 <p>The following quality control steps are subsequently performed to clean the data: 1) tree resolving using ape package; 2) cleaning up the metadata; 3) replacing taxonomic strings that are empty, NA, metagenome, ambiguous taxa; 4) split blanks from samples;</p>
+<pre><code>## [1] 3931</code></pre>
+<pre><code>## [1] 2398</code></pre>
+<pre><code>## [1] 1849</code></pre>
+<pre><code>## [1] 99.8</code></pre>
+<pre><code>## [1] 99.1</code></pre>
+<pre><code>## [1] 98.4</code></pre>
+<table class=" lightable-classic" style="font-family: &quot;Arial Narrow&quot;, &quot;Source Sans Pro&quot;, sans-serif; margin-left: auto; margin-right: auto;">
+<caption>
+Sequence data summary statistics across samples
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+statistic
+</th>
+<th style="text-align:left;">
+read count
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Min.
+</td>
+<td style="text-align:left;">
+21463
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+1st Qu.
+</td>
+<td style="text-align:left;">
+31936
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Median
+</td>
+<td style="text-align:left;">
+75974
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Mean
+</td>
+<td style="text-align:left;">
+71245
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+3rd Qu.
+</td>
+<td style="text-align:left;">
+101752
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Max.
+</td>
+<td style="text-align:left;">
+149580
+</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div id="rarefaction-curves" class="section level3">
 <h3>Rarefaction curves</h3>
@@ -212,45 +283,114 @@ dev.off()</code></pre>
 ## 
 ## data:  residuals(alpha_bath_mod)
 ## W = 0.9, p-value = 0.06</code></pre>
-<pre><code>## F Test: 
-## P-value adjustment method: fdr
-##                          Value Df Sum of Sq     F  Pr(&gt;F)    
-## CALCIUM-POTASSIUM :  T0  0.156  1     0.036  3.52    0.13    
-## CALCIUM-POTASSIUM : T24 -0.584  1     0.512 49.66 0.00004 ***
-## CALCIUM-POTASSIUM : T48 -0.030  1     0.001  0.13    0.72    
-## Residuals                      12     0.124                  
-## ---
-## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
-<pre><code>## $emmeans
-## time = T0:
-##  condition emmean     SE df lower.CL upper.CL
-##  CALCIUM     5.41 0.0586 12     5.28     5.53
-##  POTASSIUM   5.25 0.0586 12     5.12     5.38
-## 
-## time = T24:
-##  condition emmean     SE df lower.CL upper.CL
-##  CALCIUM     4.74 0.0586 12     4.61     4.86
-##  POTASSIUM   5.32 0.0586 12     5.19     5.45
-## 
-## time = T48:
-##  condition emmean     SE df lower.CL upper.CL
-##  CALCIUM     4.97 0.0586 12     4.85     5.10
-##  POTASSIUM   5.00 0.0586 12     4.88     5.13
-## 
-## Confidence level used: 0.95 
-## 
-## $contrasts
-## time = T0:
-##  contrast            estimate     SE df t.ratio p.value
-##  CALCIUM - POTASSIUM    0.156 0.0829 12  1.880  0.0850 
-## 
-## time = T24:
-##  contrast            estimate     SE df t.ratio p.value
-##  CALCIUM - POTASSIUM   -0.584 0.0829 12 -7.050  &lt;.0001 
-## 
-## time = T48:
-##  contrast            estimate     SE df t.ratio p.value
-##  CALCIUM - POTASSIUM   -0.030 0.0829 12 -0.360  0.7250</code></pre>
+<table class=" lightable-classic" style="font-family: &quot;Arial Narrow&quot;, &quot;Source Sans Pro&quot;, sans-serif; margin-left: auto; margin-right: auto;">
+<caption>
+Feedstock differences in Shannon across timepoints
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:left;">
+Value
+</th>
+<th style="text-align:left;">
+Df
+</th>
+<th style="text-align:left;">
+Sum of Sq
+</th>
+<th style="text-align:left;">
+F
+</th>
+<th style="text-align:left;">
+Pr(&gt;F)
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+CALCIUM-POTASSIUM : T0
+</td>
+<td style="text-align:left;">
+0.1556
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+0.0363
+</td>
+<td style="text-align:left;">
+3.52
+</td>
+<td style="text-align:left;">
+0.127
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+CALCIUM-POTASSIUM : T24
+</td>
+<td style="text-align:left;">
+-0.5840
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+0.5116
+</td>
+<td style="text-align:left;">
+49.66
+</td>
+<td style="text-align:left;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+CALCIUM-POTASSIUM : T48
+</td>
+<td style="text-align:left;">
+-0.0298
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+0.0013
+</td>
+<td style="text-align:left;">
+0.13
+</td>
+<td style="text-align:left;">
+0.725
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Residuals
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+12
+</td>
+<td style="text-align:left;">
+0.1236
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+</tr>
+</tbody>
+</table>
 <table class=" lightable-classic" style="font-family: &quot;Arial Narrow&quot;, &quot;Source Sans Pro&quot;, sans-serif; margin-left: auto; margin-right: auto;">
 <caption>
 ANOVA Shannon diversity
@@ -285,16 +425,16 @@ time
 2
 </td>
 <td style="text-align:left;">
-0.414
+0.413
 </td>
 <td style="text-align:left;">
-0.207
+0.2068
 </td>
 <td style="text-align:left;">
 20.1
 </td>
 <td style="text-align:left;">
-0.000
+0.0001
 </td>
 </tr>
 <tr>
@@ -308,13 +448,13 @@ condition
 0.105
 </td>
 <td style="text-align:left;">
-0.105
+0.1050
 </td>
 <td style="text-align:left;">
 10.2
 </td>
 <td style="text-align:left;">
-0.008
+0.0077
 </td>
 </tr>
 <tr>
@@ -328,13 +468,13 @@ time:condition
 0.444
 </td>
 <td style="text-align:left;">
-0.222
+0.2221
 </td>
 <td style="text-align:left;">
 21.6
 </td>
 <td style="text-align:left;">
-0.000
+0.0001
 </td>
 </tr>
 <tr>
@@ -348,7 +488,7 @@ Residuals
 0.124
 </td>
 <td style="text-align:left;">
-0.010
+0.0103
 </td>
 <td style="text-align:left;">
 NA

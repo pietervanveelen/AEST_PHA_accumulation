@@ -180,17 +180,17 @@ psdata_AEST <-
 ```
 
 
-```{r filter on abundance, message=F, echo=F, eval=T, warning=T, include=F, cache=F}
+```{r filter on abundance, message=F, echo=F, eval=T, warning=F, include=T, cache=F}
 
 # relative abundance data
-psdata_AEST_rel <- transform_sample_counts(psdata_AEST, fun = function(x) x/sum(x)) # 5154 taxa (100% abundance)
+psdata_AEST_rel <- transform_sample_counts(psdata_AEST, fun = function(x) x/sum(x)) 
 
-total_sum = sum(sample_sums(psdata_AEST)) # total reads left = 3684897
+total_sum = sum(sample_sums(psdata_AEST))
 
 # abundance filter at (0.01%, 0.1% 0.5%)
-psdata_AEST_0.01pct <- prune_taxa(taxa_sums(psdata_AEST_rel) > 0.0001, psdata_AEST) #3931 
-psdata_AEST_0.05pct <- prune_taxa(taxa_sums(psdata_AEST_rel) > 0.0005, psdata_AEST) #2398 
-psdata_AEST_0.1pct <- prune_taxa(taxa_sums(psdata_AEST_rel) > 0.001, psdata_AEST) #1849 
+psdata_AEST_0.01pct <- prune_taxa(taxa_sums(psdata_AEST_rel) > 0.0001, psdata_AEST) 
+psdata_AEST_0.05pct <- prune_taxa(taxa_sums(psdata_AEST_rel) > 0.0005, psdata_AEST) 
+psdata_AEST_0.1pct <- prune_taxa(taxa_sums(psdata_AEST_rel) > 0.001, psdata_AEST) 
 
 # taxa remaining after filters
 ntaxa(psdata_AEST_0.01pct)  # 3931
@@ -205,6 +205,16 @@ ntaxa(psdata_AEST_0.1pct)   # 1849
 ### choice to continue downstream analysis with abundance filter that retains ASVs with at least 0.5% of total read abundance.
 psdata_AEST_unfiltered <- psdata_AEST # save unfiltered data
 psdata_AEST <- psdata_AEST_0.05pct # overwrite psdata_AEST for abundance filtered data
+
+# calculate summary statistics of sequence data after abundance filtering
+psdata_AEST_0.05pct %>% 
+  subset_samples(!grepl("Blank", sampleid)) %>% 
+  sample_sums() %>% 
+  summary() %>% 
+  enframe(name = "statistic", value = "read count") %>% 
+  kableExtra::kbl(align = "l", centering = T, 
+                  caption = "Sequence data summary statistics across samples") %>%  
+  kableExtra::kable_classic()
 
 ```
 
@@ -361,14 +371,16 @@ shapiro.test(residuals(alpha_bath_mod))
 
 # test group differences
 # using phia (F test)
-phia::testInteractions(alpha_bath_mod, fixed = "time", pairwise = "condition", adjustment = "fdr")
+int_test = phia::testInteractions(alpha_bath_mod, fixed = "time", pairwise = "condition", adjustment = "fdr")
+int_test %>% kableExtra::kbl(row.names = T, align = "l", centering = T, digits = 4, 
+                             caption = "Feedstock differences in Shannon across timepoints") %>% kableExtra::kable_classic()
 
 # using emmeans (t test)
-emmeans::emmeans(alpha_bath_mod, pairwise ~ condition | time)
+#emmeans::emmeans(alpha_bath_mod, pairwise ~ condition | time)
 
 # create tables
 alpha_bath_mod_tab %>% 
-  kableExtra::kbl(row.names = T, align = "l", centering = T, digits = 3, caption = "ANOVA Shannon diversity") %>% 
+  kableExtra::kbl(row.names = T, align = "l", centering = T, digits = 4, caption = "ANOVA Shannon diversity") %>% 
   kableExtra::kable_classic()
 
 
