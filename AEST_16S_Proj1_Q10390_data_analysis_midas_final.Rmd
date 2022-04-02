@@ -6,11 +6,11 @@ output: html_document
 ---
 
 ### Description
-This is a RMarkdown document containing the analysis of microbial communities comprising PHA accumulating bacteria on wastewater activated sludge. Input data were created by sequencing 16S rRNA gene amplicons using primers 515F and 926R on Illumina Miseq (300 bp PE). Fastq sequence files were analysed using QIIME2 and the feature table, taxonomic assignments, phylogeny and metadata were imported into R. The [MiDAS4](https://www.midasfieldguide.org/global) was used as reference data for taxonomic assignments. This analysis was published by **Estevan Alonso et al. (2022)** "url DOI" titled *Calcium addition indirectly promotes selective biomass growth and polyhydroxyalkanoate accumulation*.
+This is an RMarkdown document containing the analysis of microbial communities comprising PHA accumulating bacteria on wastewater activated sludge. Input data were created by sequencing 16S rRNA gene amplicons using primers 515F and 926R on Illumina Miseq (300 bp PE). Fastq sequence files were analysed using QIIME2 and the feature table, taxonomic assignments, phylogeny and metadata were imported into R. The [MiDAS4](https://www.midasfieldguide.org/global) was used as reference data for taxonomic assignments. This analysis was published by **Estevan Alonso et al. (2022)** "url DOI" titled *Calcium addition indirectly promotes selective biomass growth and polyhydroxyalkanoate accumulation*.
 This dataset describes the temporal dynamics of PHA-accumulating microbial communities treated with CaOH~2~ or KOH as feedstock. A different subset of the microbial community is enriched in the first 48 hours in runs with CaOH~2~ compared with KOH, that caused enhanced PHA accumulation.<br>
 
-**The full RMarkdown document is available as RMD file in this repository**
-<br>
+**The full RMarkdown document is available as RMD file in this repository**<br>
+
 ```{r setup, eval=TRUE, echo=FALSE, include=FALSE, message=FALSE, warning=FALSE}
 
 # set optional parameters
@@ -193,14 +193,14 @@ psdata_AEST_0.05pct <- prune_taxa(taxa_sums(psdata_AEST_rel) > 0.0005, psdata_AE
 psdata_AEST_0.1pct <- prune_taxa(taxa_sums(psdata_AEST_rel) > 0.001, psdata_AEST) #1849 
 
 # taxa remaining after filters
-ntaxa(psdata_AEST_0.01pct)  # 3727
-ntaxa(psdata_AEST_0.05pct)  # 2252
-ntaxa(psdata_AEST_0.1pct)   # 1743
+ntaxa(psdata_AEST_0.01pct)  # 3931
+ntaxa(psdata_AEST_0.05pct)  # 2398
+ntaxa(psdata_AEST_0.1pct)   # 1849
 
 # associated relative abundances with filters
-100*(sum(sample_sums(psdata_AEST_0.01pct))/sum(sample_sums(psdata_AEST))) # (99.84% abundance)
-100*(sum(sample_sums(psdata_AEST_0.05pct))/sum(sample_sums(psdata_AEST))) # (99.06% abundance)
-100*(sum(sample_sums(psdata_AEST_0.1pct)/sum(sample_sums(psdata_AEST))))  # (98.29% abundance)
+100*(sum(sample_sums(psdata_AEST_0.01pct)))/total_sum # (99.84% abundance)
+100*(sum(sample_sums(psdata_AEST_0.05pct)))/total_sum # (99.06% abundance)
+100*(sum(sample_sums(psdata_AEST_0.1pct)))/total_sum  # (98.29% abundance)
 
 ### choice to continue downstream analysis with abundance filter that retains ASVs with at least 0.5% of total read abundance.
 psdata_AEST_unfiltered <- psdata_AEST # save unfiltered data
@@ -244,7 +244,7 @@ dev.off()
 
 ### Alpha diversity
 
-```{r alpha diversity , message=F, echo=F, eval=T, warning=F, include=T, cache=F, fig.height=5, fig.width=5}
+```{r alpha diversity all wwtp , message=F, echo=F, eval=T, warning=F, include=T, cache=F, fig.height=5, fig.width=5}
 
 ## all data (0.05% filtered)
 #psdata_AEST
@@ -319,6 +319,100 @@ ggsave(plot = prow, "figures/AEST_proj2_Alpha_diversity_Timepoint_rare26538.pdf"
 ```
 
 **Fig y** Alpha diversity. Estimates are based on rarefied data at 26538 reads per sample, which captured nearly full diversity (see rarefaction plot)<br>
+
+```{r alpha diversity , message=F, echo=F, eval=T, warning=F, include=T, cache=F, fig.height=4, fig.width=5}
+
+## all data (0.05% filtered)
+#psdata_AEST
+
+# select only AEST samples
+psdata_AEST_bath_alpha <-
+  psdata_AEST %>% 
+  subset_samples(grepl("AEST", sampleid)) %>% 
+  subset_samples(!grepl("Blank", sampleid)) %>% 
+  subset_samples(wwtp == "BATH") %>% 
+  subset_samples(time != "T120")
+
+## rarefied to 69171 r/s
+min_samples_bath = min(sample_sums(psdata_AEST_bath_alpha))
+
+set.seed(711)
+ps_69171 <- rarefy_even_depth(psdata_AEST_bath_alpha, min_samples_bath, rngseed = 711) 
+
+# calculate richness
+metadata_bath <- data.frame(sample_data(ps_69171))
+alpha_bath <- estimate_richness(ps_69171, measures = c("Chao1", "Shannon"))
+
+alpha_bath$sampleid <- sample_names(ps_69171)
+alpha_data_bath <- 
+  left_join(metadata_bath, alpha_bath, by = "sampleid") %>% 
+  rename_all(tolower) %>% 
+  mutate(time = fct_relevel(time, c("T0","T24", "T48")))
+
+# statistical differences in diversity across timepoints
+
+# anova 
+alpha_bath_mod = alpha_data_bath %>% with(., lm(shannon ~ time * condition)) 
+alpha_bath_mod_tab = alpha_bath_mod %>% anova()
+# significant interaction between time and feedstock condition
+
+# residual distribution does not deviate from normality 
+shapiro.test(residuals(alpha_bath_mod))
+
+# test group differences
+# using phia (F test)
+phia::testInteractions(alpha_bath_mod, fixed = "time", pairwise = "condition", adjustment = "fdr")
+
+# using emmeans (t test)
+emmeans::emmeans(alpha_bath_mod, pairwise ~ condition | time)
+
+# create tables
+alpha_bath_mod_tab %>% 
+  kableExtra::kbl(row.names = T, align = "l", centering = T, digits = 3, caption = "ANOVA Shannon diversity") %>% 
+  kableExtra::kable_classic()
+
+
+# plot alpha populations points
+chao1_bath <- alpha_data_bath %>% 
+  ggplot(aes(x=time, y=chao1, color = condition, shape = condition)) +
+  #geom_boxplot(show.legend = F) + 
+  scale_color_manual(values = brewer.pal(6, "Dark2")) +
+  geom_jitter(position = position_dodge(0.3)) + 
+  labs(y = "ASV richness (Chao1)", x= "Timepoint") +
+  theme_classic() +
+  guides(color = guide_legend(nrow=1),
+         shape = guide_legend(nrow = 1)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+shannon_bath <- alpha_data_bath %>% 
+  ggplot(aes(x=time, y=shannon, color = condition, shape = condition)) +
+  #geom_boxplot(show.legend = F) + 
+  scale_color_manual(values = brewer.pal(6, "Dark2")) +
+  geom_jitter(position = position_dodge(0.3)) + 
+  labs(y = "Shannon Diversity", x= "Timepoint") +
+  theme_classic() +
+  guides(color = guide_legend(nrow=1),
+         shape = guide_legend(nrow = 1)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# compile plot
+library(cowplot)
+prow_bath = plot_grid(
+  plot_grid(chao1_bath + theme(legend.position = "none"), 
+            shannon_bath + theme(legend.position = "none"),
+                   align = "hv",
+                   labels = c("A", "B"),
+                   hjust = -1, 
+                   ncol = 2),
+  get_legend(chao1_bath), 
+  nrow = 2, 
+  rel_heights = c(4, 1.5))
+          
+# show plot
+prow_bath
+
+# save plot
+ggsave(plot = prow_bath, "figures/AEST_proj2_Alpha_diversity_BATH_Timepoint_rare69171.pdf", width = 7, height = 5)
+```
 
 
 ### Relative abundance of Genus
@@ -664,11 +758,11 @@ both_mod_constrained = adonis2(dist_bath ~ condition*time, data = bc_bath, by="m
 
 # create tables
 both_mod_constrained %>% 
-  kableExtra::kbl(row.names = T, align = "l", centering = T, digits = 3) %>% 
+  kableExtra::kbl(row.names = T, align = "l", centering = T, digits = 3,  caption = "PERMANOVA beta diversity") %>% 
   kableExtra::kable_classic()
 
 both_mod$aov.tab %>% 
-  kableExtra::kbl(row.names = T, align = "l", centering = T, digits = 3) %>% 
+  kableExtra::kbl(row.names = T, align = "l", centering = T, digits = 3, caption = "PERMANOVA unconstrained beta diversity") %>% 
   kableExtra::kable_classic()
 
 # calculate pairwise group differences
