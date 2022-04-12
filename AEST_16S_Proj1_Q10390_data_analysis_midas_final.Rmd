@@ -998,7 +998,7 @@ ggsave(plot = plot_bath_w_spec,
        height = 6)
 
 ```
-
+Fig. y. Beta diversity of Bath WWTP including top 15 most abundant taxa
 
 #### Created in: 
 ```{r sessionInfo, echo=F, include=T, eval=T }
