@@ -933,7 +933,11 @@ both_mod$aov.tab %>%
 pairwiseAdonis::pairwise.adonis(dist_bath, 
                                 factors = bc_bath$time, 
                                 p.adjust.m = "fdr",
-                                perm = 999)
+                                perm = 999) %>% 
+  kableExtra::kbl(row.names = T, align = "l", centering = T, digits = 3, caption = "Pairwise PERMANOVA unconstrained beta diversity Bray-Curtis") %>% 
+  kableExtra::kable_classic()
+
+```
 
 
 # filter species scores for top_n 10 taxa
