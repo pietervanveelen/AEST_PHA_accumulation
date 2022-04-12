@@ -11,13 +11,14 @@ This dataset describes the temporal dynamics of PHA-accumulating microbial commu
 
 **The full RMarkdown document is available as RMD file in this repository**<br>
 
-```{r setup, eval=TRUE, echo=FALSE, include=FALSE, message=FALSE, warning=FALSE}
+```{r setup, eval=TRUE, echo=T, include=T, message=FALSE, warning=FALSE}
 
 # set optional parameters
 knitr::opts_chunk$set(echo = TRUE,
                       warning = FALSE, 
                       message = FALSE)
 options(scipen = 999, digits = 3)
+
 ```
 
 ```{r install packages, eval=TRUE, echo=FALSE, include=FALSE, message=FALSE, warning=FALSE}
@@ -34,6 +35,8 @@ if (!requireNamespace("qiime2R", quietly = TRUE)){devtools::install_github("jbis
 if (!requireNamespace("breakaway", quietly = TRUE)){remotes::install_github("adw96/breakaway")}
 if (!requireNamespace("DivNet", quietly = TRUE)){remotes::install_github("adw96/DivNet")}
 if (!requireNamespace("ampvis2", quietly = TRUE)){remotes::install_github("MadsAlbertsen/ampvis2")}
+if (!requireNamespace("pairwiseAdonis", quietly = TRUE)){devtools::install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")}
+
 
 ```
 
@@ -61,6 +64,7 @@ library(lmerTest)
 library(decontam)
 library(ampvis2)
 library(glue)
+library(pairwiseAdonis)
 
 ```
 
@@ -77,7 +81,7 @@ if(!dir.exists("scripts/QIIME2")){dir.create("scripts/QIIME2")}
 ```
 
 ### Data import
-All input data have been created with QIIME2 and are imported in {r session_info()$platform$version}. QIIME2 scripts and parameter settings are found in separate bash files that can be found in this [Github repository](https://github.com/pietervanveelen/AEST_PHA_accumulation).<br>
+All input data have been created with QIIME2 and are imported in R version 4.0.3. QIIME2 scripts and parameter settings are found in separate bash files that can be found in this [Github repository](https://github.com/pietervanveelen/AEST_PHA_accumulation).<br>
 
 ```{r import data, message=F, echo=T, eval=T, warning=T, include=F, cache=F}
 
@@ -249,7 +253,7 @@ dev.off()
 
 ```
 
-**Fig X**. Rarefaction curves. Species denotes number of amplicon sequence variants (ASVs) observed from the unrarefied data. Blank extraction coverage was {r min(sample_sums(psdata_AEST))} and the sample with the lowest coverage comprised 26538 reads per sample; a depth at which almost full diversity is captured. Hence, no samples were dropped in later stages.<br>
+**Fig X**. Rarefaction curves. Species denotes number of amplicon sequence variants (ASVs) observed from the unrarefied data. Blank extraction coverage was `r min(sample_sums(psdata_AEST))` and the sample with the lowest coverage comprised 26538 reads per sample; a depth at which almost full diversity is captured. Hence, no samples were dropped in later stages.<br>
 
 
 ### Alpha diversity
@@ -308,7 +312,6 @@ shannon <- alpha_data %>%
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 # compile plot
-library(cowplot)
 prow = plot_grid(
   plot_grid(chao1 + theme(legend.position = "none"), 
             shannon + theme(legend.position = "none"),
@@ -330,7 +333,7 @@ ggsave(plot = prow, "figures/AEST_proj2_Alpha_diversity_Timepoint_rare26538.pdf"
 
 **Fig y** Alpha diversity. Estimates are based on rarefied data at 26538 reads per sample, which captured nearly full diversity (see rarefaction plot)<br>
 
-```{r alpha diversity , message=F, echo=F, eval=T, warning=F, include=T, cache=F, fig.height=4, fig.width=5}
+```{r alpha diversity bath only, message=F, echo=F, eval=T, warning=F, include=T, cache=F, fig.height=3, fig.width=8}
 
 ## all data (0.05% filtered)
 #psdata_AEST
@@ -357,7 +360,8 @@ alpha_bath$sampleid <- sample_names(ps_69171)
 alpha_data_bath <- 
   left_join(metadata_bath, alpha_bath, by = "sampleid") %>% 
   rename_all(tolower) %>% 
-  mutate(time = fct_relevel(time, c("T0","T24", "T48")))
+  mutate(time = fct_relevel(time, c("T0","T24", "T48"))) %>% 
+  mutate(time_condition = factor(paste0(condition, "_", time)))
 
 # statistical differences in diversity across timepoints
 
@@ -384,30 +388,41 @@ alpha_bath_mod_tab %>%
   kableExtra::kable_classic()
 
 
+
 # plot alpha populations points
 chao1_bath <- alpha_data_bath %>% 
-  ggplot(aes(x=time, y=chao1, color = condition, shape = condition)) +
+  ggplot(aes(x=time, y=chao1, color = condition, fill = condition, shape = time_condition)) +
   #geom_boxplot(show.legend = F) + 
-  scale_color_manual(values = brewer.pal(6, "Dark2")) +
+  scale_color_manual(values = brewer.pal(6, "Dark2"), guide = "none") +
+  scale_fill_manual(values = brewer.pal(6, "Dark2"), guide = "none") +
+  scale_shape_manual(values = c(21, 22, 24, 1, 0, 2)) +
+  stat_summary(fun = "median", geom = "col", position = position_dodge(0.3), alpha = 0.3, width = 0.3) +
+  scale_y_continuous(expand = c(0, 0)) +
   geom_jitter(position = position_dodge(0.3)) + 
   labs(y = "ASV richness (Chao1)", x= "Timepoint") +
   theme_classic() +
-  guides(color = guide_legend(nrow=1),
-         shape = guide_legend(nrow = 1)) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  guides(shape = guide_legend(title = "Condition & Timepoint",  override.aes = list(
+                            shape = c(21, 22, 24, 1, 0, 2),
+                            fill = c(rep(brewer.pal(6, "Dark2")[1], 3), rep(brewer.pal(6, "Dark2")[2], 3)),
+                            color = c(rep(brewer.pal(6, "Dark2")[1], 3), rep(brewer.pal(6, "Dark2")[2], 3)))))
 shannon_bath <- alpha_data_bath %>% 
-  ggplot(aes(x=time, y=shannon, color = condition, shape = condition)) +
+  ggplot(aes(x=time, y=shannon, color = condition, fill = condition, shape = time_condition)) +
   #geom_boxplot(show.legend = F) + 
-  scale_color_manual(values = brewer.pal(6, "Dark2")) +
-  geom_jitter(position = position_dodge(0.3)) + 
+  scale_color_manual(values = brewer.pal(6, "Dark2"), guide = "none") +
+  scale_fill_manual(values = brewer.pal(6, "Dark2"), guide = "none") +
+  scale_shape_manual(values = c(21, 22, 24, 1, 0, 2)) +
+  stat_summary(fun = "median", geom = "col", position = position_dodge(0.3), alpha = 0.3, width = 0.3) +
+  scale_y_continuous(expand = c(0, 0)) +
+  geom_jitter(size = 2, position = position_dodge(0.3)) + 
   labs(y = "Shannon Diversity", x= "Timepoint") +
   theme_classic() +
-  guides(color = guide_legend(nrow=1),
-         shape = guide_legend(nrow = 1)) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  guides(shape = guide_legend(title = "Condition & Timepoint",  override.aes = list(
+                            shape = c(21, 22, 24, 1, 0, 2),
+                            fill = c(rep(brewer.pal(6, "Dark2")[1], 3), rep(brewer.pal(6, "Dark2")[2], 3)),
+                            color = c(rep(brewer.pal(6, "Dark2")[1], 3), rep(brewer.pal(6, "Dark2")[2], 3)))))
 
 # compile plot
-library(cowplot)
+
 prow_bath = plot_grid(
   plot_grid(chao1_bath + theme(legend.position = "none"), 
             shannon_bath + theme(legend.position = "none"),
@@ -416,24 +431,24 @@ prow_bath = plot_grid(
                    hjust = -1, 
                    ncol = 2),
   get_legend(chao1_bath), 
-  nrow = 2, 
-  rel_heights = c(4, 1.5))
+  nrow = 1, 
+  rel_widths = c(7.5, 1.5))
           
 # show plot
 prow_bath
 
 # save plot
-ggsave(plot = prow_bath, "figures/AEST_proj2_Alpha_diversity_BATH_Timepoint_rare69171.pdf", width = 7, height = 5)
+ggsave(plot = prow_bath, "figures/AEST_proj2_Alpha_diversity_BATH_Timepoint_rare69171_v2.pdf", width = 7, height = 5)
 ```
 
 
 ### Relative abundance of Genus
 ```{r rel abund barplot, message=F, echo=F, eval=T, warning=F, include=T, cache=F}
 
-library(RColorBrewer)
-colorset <- c("darkblue", "darkgoldenrod1", "darkseagreen", "darkorchid", "darkolivegreen1", "lightskyblue", "darkgreen",  "khaki2", "firebrick", "brown1", "darkorange1", "cyan1", "royalblue4", "darksalmon", "darkblue", "royalblue4", "dodgerblue3", "steelblue1", "lightskyblue", "darkseagreen", "darkgoldenrod1", "darkseagreen", "darkorchid", "darkolivegreen1", "brown1", "darkorange1", "cyan1", "darkgrey", "darkblue", "darkgoldenrod1", "darkseagreen", "darkorchid", "darkolivegreen1", "lightskyblue", "darkgreen", "deeppink", "khaki2", "firebrick", "brown1", "darkorange1", "cyan1", "royalblue4", "darksalmon", "darkblue", "royalblue4", "dodgerblue3", "steelblue1", "lightskyblue", "darkseagreen", "darkgoldenrod1", "darkseagreen", "darkorchid", "darkolivegreen1", "brown1", "darkorange1", "cyan1", "darkgrey")
-#input data
 
+colorset <- c("darkblue", "darkgoldenrod1", "darkseagreen", "darkorchid", "darkolivegreen1", "lightskyblue", "darkgreen",  "khaki2", "firebrick", "brown1", "darkorange1", "cyan1", "royalblue4", "darksalmon", "darkblue", "royalblue4", "dodgerblue3", "steelblue1", "lightskyblue", "darkseagreen", "darkgoldenrod1", "darkseagreen", "darkorchid", "darkolivegreen1", "brown1", "darkorange1", "cyan1", "darkgrey", "darkblue", "darkgoldenrod1", "darkseagreen", "darkorchid", "darkolivegreen1", "lightskyblue", "darkgreen", "deeppink", "khaki2", "firebrick", "brown1", "darkorange1", "cyan1", "royalblue4", "darksalmon", "darkblue", "royalblue4", "dodgerblue3", "steelblue1", "lightskyblue", "darkseagreen", "darkgoldenrod1", "darkseagreen", "darkorchid", "darkolivegreen1", "brown1", "darkorange1", "cyan1", "darkgrey")
+
+#input data
 ps_Genus <- psmelt(transform_sample_counts(tax_glom(psdata_AEST, "Genus"), fun = function(x) x/sum(x)))
 
 # count n genera n = 430
@@ -656,7 +671,6 @@ plot_beta_tbl %>%
   facet_wrap(~wwtp, ncol = 2) +
   theme(strip.background = element_rect(colour=NA, fill=NA))
 
-
 # extract and compile plots and legend 
 beta_wwtp_figs = plot_grid(plot_beta_all_wwtp + theme(legend.position = "none"),
                        get_legend(plot_beta_all_wwtp),
@@ -676,7 +690,145 @@ ggsave(plot = beta_wwtp_figs,
   
 **Fig. X**. Microbial community composition based on taxon occurrences. Principal coordinates analysis (PCoA) ordination plots of community composition based on A) Jaccard distance and B) unweighted UniFrac distances. Redox conditions applied and initial origin (sample type) both explain variation in microbial community composition. Aerobic conditions, soil-derived and industrial activated sludge-derived microbial commmunities clustered most consitently. PERMANOVA statistics yet to be performed.<br> -->
 
+Beta diversity applied to samples from WWTP's other than Bath only.
+```{r total beta diversity wwtps NO bath, message=F, echo=F, eval=T, warning=F, include=T, cache=F, fig.width=6, fig.height=8}
 
+### Beta diversity analysis first
+# input data  = psdata_AEST
+psdata_AEST_beta_noBath <-
+  psdata_AEST %>% 
+  subset_samples(time != "T120") %>% 
+  subset_samples(replicate =="A") %>% 
+  subset_samples(wwtp != "BATH")
+
+# create subset frequency matrix
+AEST_matrix_noBath <- as.matrix(t(otu_table(psdata_AEST_beta_noBath)))
+
+# determine minimal sampling depth
+min_sample_noBath <- min(sample_sums(psdata_AEST_beta_noBath))
+
+# rarefaction taking mean of 100 iterations
+set.seed(711)
+AEST_rare26538_noBath <- avgdist(AEST_matrix_noBath, d_method="bray", sample = min_sample, iterations = 100)
+source("scripts/avgrarefy.r")
+AEST_rare26538_table_noBath = avgrarefy(x=AEST_matrix_noBath, sample = min_sample_noBath, iterations = 100, seed = 711)
+
+
+# PCoA on rarefied data
+pcoa_noBath <- cmdscale(AEST_rare26538_noBath, k = 2, eig = T, add = T)
+positions_noBath <- pcoa_noBath$points
+colnames(positions_noBath) <- c("pcoa1", "pcoa2")
+ 
+# PCoA species scores
+spe.wa_noBath <- wascores(pcoa_noBath$points[,1:2], AEST_rare26538_table_noBath)
+colnames(spe.wa_noBath) <- c("pcoa1", "pcoa2")
+
+# Add taxonomic information to species scores
+tax_beta_div_noBath <-
+  tax_table(psdata_AEST_beta_noBath) %>% 
+  as.data.frame() %>% 
+  as_tibble(rownames = "taxon")
+spe.scores_noBath <- spe.wa_noBath %>% 
+  as_tibble(rownames = "taxon") %>% 
+  inner_join(., tax_beta_div_noBath, by = "taxon") %>% 
+  select(taxon, Family, Genus, pcoa1, pcoa2)
+  
+
+# percent explained by axes
+percent_explained_noBath <- 100* pcoa_noBath$eig / sum(pcoa_noBath$eig)
+
+# percent explained labeling
+pretty_pe_noBath <- format(round(percent_explained_noBath[1:2], digits = 1), nsmall =1, trim=T)
+
+# axis labels 
+labs_noBath <- c(glue("PCoA 1 ({pretty_pe_noBath[1]}%)"),
+          glue("PCoA 2 ({pretty_pe_noBath[2]}%)"))
+
+# select top 10 abundant taxa across the dataset
+source("scripts/ps_abund_top_info.r")
+topn = 15
+ASV_info_abund_noBath <- ps_abund_top_info(psdata_AEST_beta_noBath, top_nr = topn)
+
+# filteer species scores for top 10 taxa
+spe.scores_top_noBath = spe.scores_noBath %>% filter(taxon %in% ASV_info_abund_noBath$taxon) %>% 
+  mutate(Genus = if_else(is.na(Genus), paste0("Genus of ", Family), Genus)) %>% 
+  inner_join(., ASV_info_abund_noBath %>% select(taxon, abund), by = "taxon") %>% 
+  mutate(abund_sqrt_1000r = sqrt(abund/1000))
+
+# plot samples and top25 species scores
+plot_beta_tbl_noBath <- positions_noBath %>%  
+  as_tibble(rownames = "samples") %>% 
+  inner_join(., meta_formatted, by = c("samples"="sampleid")) %>% 
+  mutate(time_condition = factor(paste0(condition, "_", time))) %>% 
+  mutate_if(is.character, as.factor)
+
+# view number of samples per group
+# plot_beta_tbl %>% 
+#   group_by(wwtp, condition, time) %>% 
+#   summarise(n=n())
+
+plot_beta_all_wwtp_noBath = 
+plot_beta_tbl_noBath %>% 
+  ggplot(aes(x=pcoa1, y=pcoa2)) +
+  geom_vline(xintercept = 0, linetype = 3, color = "grey80") +
+  geom_hline(yintercept = 0, linetype = 3, color = "grey80") +
+  geom_point(aes(shape=time_condition, color=wwtp, fill=wwtp)) +
+  geom_segment(
+      data = spe.scores_top_noBath,
+      aes(
+        x = 0, 
+        y = 0,
+        xend = pcoa1, 
+        yend = pcoa2
+      ),
+      arrow = arrow(length = unit(1, "mm")),
+      color = "grey80") +
+  # geom_point(data = spe.scores_top, 
+  #            aes(x=pcoa1, 
+  #                y=pcoa2, 
+  #                label=Genus, 
+  #                size = abund_sqrt_1000r, 
+  #                alpha=1-(1/abund_sqrt_1000r)
+  #                ), 
+  #            color = "grey80",
+  #            show.legend = c(alpha = NULL)) +
+  geom_text(data=spe.scores_top_noBath, 
+            aes(label=Genus, 
+            hjust = ifelse(pcoa1>=0, 0, 1),
+            nudge_x = ifelse(pcoa1>=0, -0.5, 0.5)),
+            color = "grey70", 
+            size = 4, 
+            check_overlap = F) +
+  scale_shape_manual(values = c(21, 22, 24, 1, 0, 2)) +
+  scale_color_manual(values = brewer.pal(6, "Dark2")) +
+  scale_fill_manual(values = brewer.pal(6, "Dark2"), guide= "none") +
+  guides(shape = guide_legend(title = "Condition & Timepoint",  override.aes = list(
+    shape = c(21, 22, 24, 1, 0, 2),
+    fill = c(rep("black", 3), rep("white", 3))))) +
+  labs(x = labs[1], y=labs[2]) +
+  coord_cartesian(xlim = c(-0.5, NA)) +
+  theme_classic() +
+  facet_wrap(~wwtp, ncol = 2) +
+  theme(strip.background = element_rect(colour=NA, fill=NA))
+
+# extract and compile plots and legend 
+beta_wwtp_figs_noBath = plot_grid(plot_beta_all_wwtp_noBath + theme(legend.position = "none"),
+                       get_legend(plot_beta_all_wwtp_noBath),
+                       ncol = 2,
+                       rel_widths = c(3,0.5))
+
+# show plpt
+beta_wwtp_figs_noBath
+
+# save plot
+ggsave(plot = beta_wwtp_figs_noBath, 
+       file = stringr::str_glue("figures/{proj}_beta_div_PCoA_BrayCurtis_topN{topn}_allWWTPs_noBath.pdf"), 
+       width = 8, 
+       height = 10)
+   
+```  
+
+Beta diversity applied to samples from Bath WWTP only.
 ```{r total beta diversity Bath only, message=F, echo=F, eval=T, warning=F, include=T, cache=F, fig.width=6, fig.height=5}
 
 ### Beta diversity analysis first
@@ -770,7 +922,7 @@ both_mod_constrained = adonis2(dist_bath ~ condition*time, data = bc_bath, by="m
 
 # create tables
 both_mod_constrained %>% 
-  kableExtra::kbl(row.names = T, align = "l", centering = T, digits = 3,  caption = "PERMANOVA beta diversity") %>% 
+  kableExtra::kbl(row.names = T, align = "l", centering = T, digits = 3,  caption = "PERMANOVA beta diversity") %>%
   kableExtra::kable_classic()
 
 both_mod$aov.tab %>% 
@@ -802,6 +954,7 @@ plot_beta_tbl_bath <- positions_bath %>%
 #   group_by(condition, time) %>% 
 #   summarise(n=n())
 
+# plot beta diversity with top species scores
 plot_bath_w_spec =
 plot_beta_tbl_bath %>% 
   ggplot(aes(x=pcoa1, y=pcoa2)) +
@@ -845,3 +998,12 @@ ggsave(plot = plot_bath_w_spec,
        height = 6)
 
 ```
+
+
+#### Created in: 
+```{r sessionInfo, echo=F, include=T, eval=T }
+
+sessionInfo()
+
+```
+
